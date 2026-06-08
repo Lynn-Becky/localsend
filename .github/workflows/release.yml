@@ -366,16 +366,16 @@ jobs:
 
       - name: Compile for Windows
         run: |
-          $arguments = @(
-            "-Architecture", "${{ matrix.build_architecture }}",
-            "-FlutterCommand", "flutter",
-            "-OutputPath", "LocalSend.zip",
-            "-BuildLogPath", "build-windows-${{ matrix.build_architecture }}.log"
-          )
-          if ("${{ matrix.build_architecture }}" -eq "arm64") {
-            $arguments += "-VerboseFlutterBuild"
+          $parameters = @{
+            Architecture = "${{ matrix.build_architecture }}"
+            FlutterCommand = "flutter"
+            OutputPath = "LocalSend.zip"
+            BuildLogPath = "build-windows-${{ matrix.build_architecture }}.log"
           }
-          .\scripts\compile_windows_zip.ps1 @arguments
+          if ("${{ matrix.build_architecture }}" -eq "arm64") {
+            $parameters.VerboseFlutterBuild = $true
+          }
+          .\scripts\compile_windows_zip.ps1 @parameters
 
       - name: Upload build logs
         if: always()
