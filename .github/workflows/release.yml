@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  FLUTTER_VERSION: "3.35.6"
+  FLUTTER_VERSION: "3.44.0"
   RUST_VERSION: "1.84.1"
   APK_BUILD_DIR: "/tmp/build"
 
@@ -331,9 +331,21 @@ jobs:
           name: appimage-x86-64-result
           path: ./*.AppImage
 
-  build_windows_zip_x86_64:
+  build_windows_zip:
     needs: build
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_architecture: x64
+            artifact_architecture: x86-64
+            flutter_architecture: x64
+            runner: windows-latest
+          - build_architecture: arm64
+            artifact_architecture: arm64
+            flutter_architecture: arm64
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Fix long file paths
@@ -346,34 +358,15 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: "stable"
-
-      - name: Dependencies
-        working-directory: app
-        run: flutter pub get
+          architecture: ${{ matrix.flutter_architecture }}
 
       - name: Compile for Windows
-        working-directory: app
-        run: flutter build windows
-
-      - name: Create empty settings.json
-        working-directory: app
-        run: echo {} > build/windows/x64/runner/Release/settings.json
-
-      - name: Add DLL files
-        working-directory: app
-        run: |
-          Copy-Item ../scripts/windows/x64/msvcp140.dll build/windows/x64/runner/Release/
-          Copy-Item ../scripts/windows/x64/vcruntime140.dll build/windows/x64/runner/Release/
-          Copy-Item ../scripts/windows/x64/vcruntime140_1.dll build/windows/x64/runner/Release/
-
-      - name: Zip compiled files
-        working-directory: app
-        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath LocalSend.zip
+        run: .\scripts\compile_windows_zip.ps1 -Architecture ${{ matrix.build_architecture }} -FlutterCommand flutter -OutputPath LocalSend.zip
 
       - name: Upload zip
         uses: actions/upload-artifact@v6
         with:
-          name: windows-zip-x86-64-result
+          name: windows-zip-${{ matrix.artifact_architecture }}-result
           path: app/LocalSend.zip
 
   release:
@@ -385,7 +378,7 @@ jobs:
       - build_deb_x86_64
       - build_deb_arm_64
       - build_appimage_x86_64
-      - build_windows_zip_x86_64
+      - build_windows_zip
     runs-on: ubuntu-24.04
 
     steps:
@@ -572,4 +565,24 @@ jobs:
           upload_url: ${{ steps.draft_release.outputs.upload_url }}
           asset_path: result.zip
           asset_name: LocalSend-${{ needs.build.outputs.version }}-windows-x86-64.zip
+          asset_content_type: application/zip
+
+      # WINDOWS ZIP (arm64)
+      - name: Download windows arm64 zip file
+        uses: actions/download-artifact@v7
+        with:
+          name: windows-zip-arm64-result
+          path: windows-zip-arm64-result
+
+      - name: Copy arm64 zip file to root
+        run: cp windows-zip-arm64-result/*.zip result.zip
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.draft_release.outputs.upload_url }}
+          asset_path: result.zip
+          asset_name: LocalSend-${{ needs.build.outputs.version }}-windows-arm64.zip
           asset_content_type: application/zip

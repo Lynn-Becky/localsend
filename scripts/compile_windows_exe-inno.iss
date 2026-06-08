@@ -9,6 +9,19 @@
 #define MyAppURL "https://localsend.org"
 #define MyAppExeName "localsend_app.exe"
 #define MyAppMsixHelper "localsend_msix_helper.msix"
+#ifndef AppArchitecture
+#define AppArchitecture "x64"
+#endif
+
+#if AppArchitecture == "arm64"
+#define MyAppArchitectureName "arm64"
+#define MyAppArchitecturesAllowed "arm64"
+#define MyAppArchitecturesInstallIn64BitMode "arm64"
+#else
+#define MyAppArchitectureName "x86-64"
+#define MyAppArchitecturesAllowed "x64compatible"
+#define MyAppArchitecturesInstallIn64BitMode "x64compatible"
+#endif
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -27,15 +40,15 @@ DisableProgramGroupPage=yes
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=D:\inno-result
-OutputBaseFilename=localsend
 SetupIconFile=D:\inno\logo.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 SignTool=MySignTool
-ArchitecturesInstallIn64BitMode=x64compatible
-ArchitecturesAllowed=x64compatible
+OutputBaseFilename=localsend-{#MyAppArchitectureName}
+ArchitecturesInstallIn64BitMode={#MyAppArchitecturesInstallIn64BitMode}
+ArchitecturesAllowed={#MyAppArchitecturesAllowed}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

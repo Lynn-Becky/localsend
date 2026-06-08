@@ -1,19 +1,33 @@
-cd app
+param(
+    [ValidateSet("x64", "arm64")]
+    [string]$Architecture = "x64",
 
-fvm flutter clean
-fvm flutter pub get
-fvm flutter build windows
+    [string[]]$FlutterCommand = @("fvm", "flutter")
+)
 
-Remove-Item "D:\inno" -Force  -Recurse -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path "D:\inno"
-Copy-Item -Path "build\windows\x64\runner\Release\*" -Destination "D:\inno" -Recurse
-Copy-Item -Path "assets\packaging\logo.ico" -Destination "D:\inno"
+. $PSScriptRoot\windows_build_helpers.ps1
 
-cd ..
+Push-Location (Join-Path -Path $PSScriptRoot -ChildPath "..\app")
+try {
+    Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("clean")
+    Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("pub", "get")
+    Ensure-WindowsMsixHelper -Architecture $Architecture
+    Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("build", "windows")
 
-Copy-Item -Path "scripts\windows\x64\*" -Destination "D:\inno" -Recurse
-Remove-Item "D:\inno-result" -Force  -Recurse -ErrorAction SilentlyContinue
+    $outputDir = Get-WindowsBuildOutputDir -Architecture $Architecture
+    Assert-WindowsBuildOutputDir -Architecture $Architecture -Path $outputDir
+
+    Remove-Item "D:\inno" -Force -Recurse -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path "D:\inno"
+    Copy-Item -Path (Join-Path -Path $outputDir -ChildPath "*") -Destination "D:\inno" -Recurse
+    Copy-Item -Path "assets\packaging\logo.ico" -Destination "D:\inno"
+} finally {
+    Pop-Location
+}
+
+Copy-WindowsRuntimeDlls -Architecture $Architecture -Destination "D:\inno"
+Remove-Item "D:\inno-result" -Force -Recurse -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path "D:\inno-result"
-iscc .\scripts\compile_windows_exe-inno.iss
+iscc "/DAppArchitecture=$Architecture" .\scripts\compile_windows_exe-inno.iss
 
-Write-Output 'Generated Windows exe installer!'
+Write-Output "Generated Windows $Architecture exe installer!"

@@ -226,6 +226,13 @@ flutter build macos
 flutter build windows
 ```
 
+Windows ARM64 builds require the ARM64 Flutter SDK. The release scripts accept
+`-Architecture arm64`, for example:
+
+```powershell
+.\scripts\compile_windows_zip.ps1 -Architecture arm64
+```
+
 **Local MSIX App**
 
 ```bash

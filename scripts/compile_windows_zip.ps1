@@ -2,14 +2,41 @@
 # git reset --hard origin/main
 # git pull
 
-cd app
+param(
+    [ValidateSet("x64", "arm64")]
+    [string]$Architecture = "x64",
 
-fvm flutter clean
-fvm flutter pub get
-fvm flutter build windows
+    [string]$OutputPath,
 
-Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath LocalSend-XXX-windows-x86-64.zip
+    [string[]]$FlutterCommand = @("fvm", "flutter")
+)
 
-cd ..
+. $PSScriptRoot\windows_build_helpers.ps1
 
-Write-Output 'Generated Windows zip!'
+$artifactArchitecture = Get-WindowsArtifactArchitectureName -Architecture $Architecture
+if (!$OutputPath) {
+    $OutputPath = "LocalSend-XXX-windows-$artifactArchitecture.zip"
+}
+
+Push-Location (Join-Path -Path $PSScriptRoot -ChildPath "..\app")
+try {
+    Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("clean")
+    Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("pub", "get")
+    Ensure-WindowsMsixHelper -Architecture $Architecture
+    Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("build", "windows")
+
+    $outputDir = Get-WindowsBuildOutputDir -Architecture $Architecture
+    Assert-WindowsBuildOutputDir -Architecture $Architecture -Path $outputDir
+
+    Set-Content -Path (Join-Path -Path $outputDir -ChildPath "settings.json") -Value "{}" -NoNewline
+    Copy-WindowsRuntimeDlls -Architecture $Architecture -Destination $outputDir
+
+    if (Test-Path $OutputPath) {
+        Remove-Item -Path $OutputPath -Force
+    }
+    Compress-Archive -Path (Join-Path -Path $outputDir -ChildPath "*") -DestinationPath $OutputPath
+} finally {
+    Pop-Location
+}
+
+Write-Output "Generated Windows $Architecture zip!"

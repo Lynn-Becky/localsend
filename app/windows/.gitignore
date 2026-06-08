@@ -9,6 +9,7 @@ flutter/ephemeral/
 # Visual Studio build-related files.
 x64/
 x86/
+arm64/
 
 # Visual Studio cache files
 # files ending in .cache can be ignored
@@ -17,3 +18,4 @@ x86/
 !*.[Cc]ache/
 
 localsend_msix_helper.msix
+localsend_msix_helper.msix.arch
