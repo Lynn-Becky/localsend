@@ -42,7 +42,9 @@ function Invoke-ExternalCommand {
         [string[]]$Command,
 
         [Parameter(Mandatory=$true)]
-        [string[]]$Arguments
+        [string[]]$Arguments,
+
+        [string]$LogPath
     )
 
     if ($Command.Length -eq 0) {
@@ -55,7 +57,17 @@ function Invoke-ExternalCommand {
         $prefixArgs = $Command[1..($Command.Length - 1)]
     }
 
-    & $executable @prefixArgs @Arguments
+    if ($LogPath) {
+        $logDir = Split-Path -Parent $LogPath
+        if ($logDir) {
+            New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+        }
+
+        & $executable @prefixArgs @Arguments 2>&1 | Tee-Object -FilePath $LogPath
+    } else {
+        & $executable @prefixArgs @Arguments
+    }
+
     if ($LASTEXITCODE -ne 0) {
         throw "Command failed: $($Command -join ' ') $($Arguments -join ' ')"
     }
@@ -67,10 +79,12 @@ function Invoke-FlutterCommand {
         [string[]]$FlutterCommand,
 
         [Parameter(Mandatory=$true)]
-        [string[]]$Arguments
+        [string[]]$Arguments,
+
+        [string]$LogPath
     )
 
-    Invoke-ExternalCommand -Command $FlutterCommand -Arguments $Arguments
+    Invoke-ExternalCommand -Command $FlutterCommand -Arguments $Arguments -LogPath $LogPath
 }
 
 function Invoke-DartCommand {

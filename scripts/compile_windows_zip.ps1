@@ -8,7 +8,11 @@ param(
 
     [string]$OutputPath,
 
-    [string[]]$FlutterCommand = @("fvm", "flutter")
+    [string[]]$FlutterCommand = @("fvm", "flutter"),
+
+    [string]$BuildLogPath,
+
+    [switch]$VerboseFlutterBuild
 )
 
 . $PSScriptRoot\windows_build_helpers.ps1
@@ -23,7 +27,19 @@ try {
     Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("clean")
     Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("pub", "get")
     Ensure-WindowsMsixHelper -Architecture $Architecture
-    Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("build", "windows")
+
+    $flutterBuildArgs = @("build", "windows")
+    $previousCargokitVerbose = $env:CARGOKIT_VERBOSE
+    if ($VerboseFlutterBuild) {
+        $flutterBuildArgs += "-v"
+        $env:CARGOKIT_VERBOSE = "1"
+    }
+
+    try {
+        Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments $flutterBuildArgs -LogPath $BuildLogPath
+    } finally {
+        $env:CARGOKIT_VERBOSE = $previousCargokitVerbose
+    }
 
     $outputDir = Get-WindowsBuildOutputDir -Architecture $Architecture
     Assert-WindowsBuildOutputDir -Architecture $Architecture -Path $outputDir

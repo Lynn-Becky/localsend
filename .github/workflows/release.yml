@@ -365,7 +365,28 @@ jobs:
         run: .\scripts\setup_flutter_windows_arm64_host.ps1
 
       - name: Compile for Windows
-        run: .\scripts\compile_windows_zip.ps1 -Architecture ${{ matrix.build_architecture }} -FlutterCommand flutter -OutputPath LocalSend.zip
+        run: |
+          $arguments = @(
+            "-Architecture", "${{ matrix.build_architecture }}",
+            "-FlutterCommand", "flutter",
+            "-OutputPath", "LocalSend.zip",
+            "-BuildLogPath", "build-windows-${{ matrix.build_architecture }}.log"
+          )
+          if ("${{ matrix.build_architecture }}" -eq "arm64") {
+            $arguments += "-VerboseFlutterBuild"
+          }
+          .\scripts\compile_windows_zip.ps1 @arguments
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-zip-${{ matrix.artifact_architecture }}-logs
+          path: |
+            app/build-windows-${{ matrix.build_architecture }}.log
+            app/build/windows/${{ matrix.build_architecture }}/**/*.log
+            app/build/windows/${{ matrix.build_architecture }}/**/*.txt
+          if-no-files-found: ignore
 
       - name: Upload zip
         uses: actions/upload-artifact@v6
