@@ -1,6 +1,8 @@
 name: Build windows zip
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 env:
