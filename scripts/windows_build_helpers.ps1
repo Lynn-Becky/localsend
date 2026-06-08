@@ -32,7 +32,7 @@ function Assert-WindowsBuildOutputDir {
     )
 
     if (!(Test-Path $Path)) {
-        throw "Windows $Architecture build output was not found at '$Path'. For arm64 builds, make sure the arm64 Flutter SDK is installed and selected."
+        throw "Windows $Architecture build output was not found at '$Path'. For arm64 builds, run on a Windows ARM64 host with an ARM64 Dart SDK in Flutter's cache."
     }
 }
 

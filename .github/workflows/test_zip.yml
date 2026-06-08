@@ -74,7 +74,7 @@ jobs:
             runner: windows-latest
           - build_architecture: arm64
             artifact_architecture: arm64
-            flutter_architecture: arm64
+            flutter_architecture: x64
             runner: windows-11-arm
     runs-on: ${{ matrix.runner }}
 
@@ -90,6 +90,10 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: "stable"
           architecture: ${{ matrix.flutter_architecture }}
+
+      - name: Use ARM64 Dart host for Flutter
+        if: matrix.build_architecture == 'arm64'
+        run: .\scripts\setup_flutter_windows_arm64_host.ps1
 
       - name: Compile for Windows
         run: .\scripts\compile_windows_zip.ps1 -Architecture ${{ matrix.build_architecture }} -FlutterCommand flutter -OutputPath LocalSend.zip
