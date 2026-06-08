@@ -99,6 +99,49 @@ function Invoke-DartCommand {
     Invoke-ExternalCommand -Command $DartCommand -Arguments $Arguments
 }
 
+function Patch-RhttpCargokitWindowsArm64Target {
+    $pubCache = $env:PUB_CACHE
+    if (!$pubCache) {
+        $pubCache = Join-Path -Path $env:LOCALAPPDATA -ChildPath "Pub\Cache"
+    }
+
+    if (!(Test-Path $pubCache)) {
+        throw "Could not find Pub cache at '$pubCache' to patch rhttp cargokit."
+    }
+
+    $targetFiles = Get-ChildItem -Path $pubCache -Recurse -Filter target.dart -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -like "*rhttp-*\cargokit\build_tool\lib\src\target.dart" }
+
+    if (!$targetFiles) {
+        throw "Could not find rhttp cargokit target.dart in Pub cache '$pubCache'."
+    }
+
+    foreach ($targetFile in $targetFiles) {
+        $content = Get-Content -Path $targetFile.FullName -Raw
+        if ($content -match "windows-arm64") {
+            Write-Output "rhttp cargokit already supports windows-arm64: $($targetFile.FullName)"
+            continue
+        }
+
+        # rhttp 0.13.0 vendors an older cargokit without Windows ARM64 support.
+        $pattern = "(?m)(    Target\(\r?\n      rust: 'x86_64-pc-windows-msvc',\r?\n      flutter: 'windows-x64',\r?\n    \),)"
+        $replacement = @'
+$1
+    Target(
+      rust: 'aarch64-pc-windows-msvc',
+      flutter: 'windows-arm64',
+    ),
+'@
+        $patched = [System.Text.RegularExpressions.Regex]::Replace($content, $pattern, $replacement, 1)
+        if ($patched -eq $content) {
+            throw "Could not patch rhttp cargokit target list in '$($targetFile.FullName)'."
+        }
+
+        Set-Content -Path $targetFile.FullName -Value $patched -NoNewline
+        Write-Output "Patched rhttp cargokit windows-arm64 target: $($targetFile.FullName)"
+    }
+}
+
 function Find-WindowsRuntimeDllDir {
     param(
         [Parameter(Mandatory=$true)]

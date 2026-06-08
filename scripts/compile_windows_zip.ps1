@@ -26,6 +26,9 @@ Push-Location (Join-Path -Path $PSScriptRoot -ChildPath "..\app")
 try {
     Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("clean")
     Invoke-FlutterCommand -FlutterCommand $FlutterCommand -Arguments @("pub", "get")
+    if ($Architecture -eq "arm64") {
+        Patch-RhttpCargokitWindowsArm64Target
+    }
     Ensure-WindowsMsixHelper -Architecture $Architecture
 
     $flutterBuildArgs = @("build", "windows")
